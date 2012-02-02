@@ -48,6 +48,7 @@ space.gravity = (0.0, -900.0)
 balls = []
 ## Points
 points = []
+pscore = [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
 ### walls
 static_body = pm.Body()
 
@@ -153,8 +154,6 @@ def del_ball(ball):
 def change_velocity(balls):
     for ball in balls:
         abs_velo = abs(ball.body.velocity[0]) + abs(ball.body.velocity[1])
-        if abs_velo <= 10.0:
-            del_ball(ball)
 
 def draw_balls(balls):
     for ball in balls:
@@ -191,6 +190,21 @@ def draw_power(space_pressed):
     for i in range(int(space_pressed)):
         pygame.draw.rect(screen, (255,0,0), (700, 570, 100, -i))
 
+def def_contact(contact):
+    for point in points:
+        x, y = point
+        bx, by = balls[0].body.position
+        length = math.sqrt((bx - x) * (bx - x) + (by - y) * (by - y))
+       # print(point, balls[0].body.position, length)
+        if length <= 60.0 and contact == 0:
+            contact = 1
+            return 1
+        elif length <= 60.0:
+            contact += 1
+        else:
+            contact = 0
+        print(contact)
+    return contact
     
 def play():
     add_point(70, 65)
@@ -207,6 +221,7 @@ def play():
     begin_time = 0
     running = True
     last_impulse = 0
+    contact = 0
     scores = 0
     space_pressed = 0
     while running:
@@ -230,9 +245,15 @@ def play():
                 if impulse > 20000:
                     impulse = 20000
                 last_impulse = impulse
+                if len(balls):
+                    del_ball(balls[0])
                 add_ball(impulse)
 
         print_impulse(last_impulse)
+        if len(balls):
+            contact = def_contact(contact)
+        if contact == 1:
+            scores += 100
         print_scores(scores)
         change_velocity(balls)
         draw_power(space_pressed)
