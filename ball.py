@@ -6,39 +6,25 @@ from pygame.locals import *
 from pygame.color import *
 import pymunk as pm
 from pymunk import Vec2d
-import math, sys, random
-
-import pygame, sys
+import math
+import sys
 import time
 
-def to_pygame(p):
-    return int(p.x), int(-p.y+600)
-    
 pygame.init()
 screen = pygame.display.set_mode((1024, 600))
 clock = pygame.time.Clock()
+Font = pygame.font.SysFont('sans-serif', 24)
 ballsprite = pygame.image.load("ball.png")
 rballsprite = ballsprite.get_rect()
 pointsprite = pygame.image.load("lulza.png")
 rpointsprite = pointsprite.get_rect()
 
-# pres                                                                          
-screen.fill((54, 126, 121))                                                     
-Font = pygame.font.SysFont('sans-serif', 46)                                    
-label = Font.render("Child Billiard", True, (0,0,0))                            
-screen.blit(label, (300,300))                                                   
-label = Font.render("Ovcharenko", True, (0,0,0))                                
-screen.blit(label, (400,400))                                                   
-label = Font.render("Egorov", True, (0,0,0))                                    
-screen.blit(label, (400,430))                                                   
-label = Font.render("Kamenev", True, (0,0,0))                                   
-screen.blit(label, (400,460))                                                   
-flag = 1                                                                        
-while flag == 1:                                                                
-    for event in pygame.event.get():                                            
-        if event.type == KEYDOWN:                                               
-            flag = 0                                                            
-Font = pygame.font.SysFont('sans-serif', 24) 
+# ball data
+ball_mass = 10
+ball_radius = 25
+ball_elast = 0.55
+# point data
+point_radius = 35
 
 ### Physics stuff
 space = pm.Space()
@@ -47,126 +33,148 @@ space.gravity = (0.0, -900.0)
 ## Balls
 balls = []
 ## Points
-points = []
-pscore = [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
-### walls
-static_body = pm.Body()
-
-#Координаты линий 
-static_lines = [pm.Segment(static_body, (30.0, 30.0), (650.0, 30.0), 0.0)#Нижняя линия рамки
-                ,pm.Segment(static_body, (30.0, 30.0), (30.0, 380.0), 0.0)#Левая боковая линия рамки
-                ,pm.Segment(static_body, (650.0, 30.0), (650.0, 380.0), 0.0)#Правая бокавая линия рамки
-                ,pm.Segment(static_body, (570.0, 30.0), (570.0, 380.0), 0.0)#Перегородка
-                ]
-
-barrier_static_lines = [
-                         #Барьер №1, левый верхний угол, возле дуги
-                         pm.Segment(static_body, (40,420),(43,397), 0)
-                        ,pm.Segment(static_body, (43,397),(51,384), 0)
-                        ,pm.Segment(static_body, (51,384),(70,372), 0)
-                        ,pm.Segment(static_body, (70,372),(80,368), 0)
-                        ,pm.Segment(static_body, (80,368),(30,355), 0)
-						#Барьер №2, 
-                        ,pm.Segment(static_body, (190,398),(260,384), 0)
-                        ,pm.Segment(static_body, (190,398),(176,450), 0)
-                        #Барьер №3
-                        ,pm.Segment(static_body, (100,306),(220,297), 0)
-						#Барьер №4
-                        ,pm.Segment(static_body, (340,297),(320,273), 0)
-                        ,pm.Segment(static_body, (320,273),(305,266), 0)
-                        #Барьер №5
-                        ,pm.Segment(static_body, (438,459),(452,321), 0)
-                        #Барьер №6
-                        ,pm.Segment(static_body, (570,298),(560,279), 0)
-                        ,pm.Segment(static_body, (560,279),(542,260), 0)
-                        ,pm.Segment(static_body, (542,260),(531,251), 0)
-                        ,pm.Segment(static_body, (531,251),(523,247), 0)
-                        ,pm.Segment(static_body, (523,247),(514,243), 0)
-                        ,pm.Segment(static_body, (514,243),(500,239), 0)
-                        ,pm.Segment(static_body, (500,239),(481,235), 0)
-                        ,pm.Segment(static_body, (481,235),(570,229), 0)
-                        #Барьер №7
-                        ,pm.Segment(static_body, (400,190),(480,150), 0)
-                        ,pm.Segment(static_body, (400,190),(346,123), 0)
-                        ,pm.Segment(static_body, (385,170),(246,153), 0)
-                        ,pm.Segment(static_body, (246,153),(346,123), 0)
-                        ,pm.Segment(static_body, (346,123),(326,30), 0)
-                        ,pm.Segment(static_body, (480,150),(448,30), 0)
-                        #Барьер №8
-                        ,pm.Segment(static_body, (116,108),(100,30), 0)
-                        ,pm.Segment(static_body, (116,108),(157,99), 0)
-                        ,pm.Segment(static_body, (157,99),(187,30), 0)
-                        #Барьер #9
-                        ,pm.Segment(static_body, (126,180),(140,177), 0)
-                        ,pm.Segment(static_body, (140,177),(149,184), 0)
-                        ,pm.Segment(static_body, (149,184),(133,201), 0)
-                        ,pm.Segment(static_body, (133,201),(126,180), 0)
+points = [
+    ((610, 70), 0),                                                     
+    ((100, 400), 100),                                                      
+    ((230, 430), -200),                                                     
+    ((150, 240), -200),                                                      
+    ((260, 310), -100),                                                      
+    ((390, 330), -200),                                                     
+    ((320, 220), 200),                                                      
+    ((500, 300), 150),                                                      
+    ((70, 65), 100),                                                        
+    ((265, 73), -300),                                                      
+    ((515, 80), 300)
 ]
 
-sx = [30,50,70,90,110,130,150,170,190,210,230,250,270,290,310,330,350,
-        370,390,410,430,450,470,490,510,530,550,570,590,610,630,650]
-
-sy = [380,440,470,490,505,517,528,537,544,551,556,560,564,567,570,570,
-        570,568,567,564,560,556,551,544,537,526,516,505,488,471,441,380]
-
-frame_arc = []
-for i in range(len(sx) - 1):
-    frame_arc.append(pm.Segment(static_body, (sx[i], sy[i]), (sx[i + 1], sy[i + 1]), 0.0))
-
+static_body = pm.Body()
+stlines = [
+        # borders
+        ((30.0, 30.0), (650.0, 30.0)),    # bottom
+        ((30.0, 30.0), (30.0, 380.0)),    # left
+        ((650.0, 30.0), (650.0, 380.0)),  # right
+        ((570.0, 30.0), (570.0, 390.0)),  # center
+        # barriers
+        # barrier 1
+        ((40, 420), (43, 397)), ((43, 397), (51, 384)),
+        ((51, 384), (70, 372)), ((70, 372), (80, 368)),
+        ((80, 368), (30, 355)),
+		# barrier 2
+        ((190, 398), (260, 384)), ((190, 398), (176, 450)),
+        ((176, 450), (154, 413)), ((154, 413), (138, 405)),
+        ((138, 405), (149, 368)), ((149, 368), (260, 384)),
+        # barrier 3
+        ((100, 306), (220, 297)), ((220, 297), (196, 277)),
+        ((196, 277), (178, 271)), ((178, 271), (100, 306)),
+        # barrier 4
+        ((340, 297), (320, 273)), ((320, 273), (305, 266)),
+        ((305, 266), (294, 278)), ((294, 278), (305, 309)),
+        ((305, 309), (340, 297)),
+        # barrier 5
+        ((438, 439), (452, 402)), ((438, 439), (408, 381)),
+        ((408, 381), (397, 375)), ((397, 375), (420, 366)),
+        ((420, 366), (437, 341)), ((437, 341), (469, 371)),
+        ((469, 371), (474, 388)), ((474, 388), (452, 402)),
+        # barrier 6
+        ((570, 298), (560, 279)), ((560, 279), (542, 260)),
+        ((542, 260), (531, 251)), ((531, 251), (523, 247)),
+        ((523, 247), (514, 243)), ((514, 243), (500, 239)),
+        ((500, 239), (481, 235)), ((481, 235), (570, 229)),
+        # barrier 7
+        ((400, 190), (480, 150)), ((400, 190), (346, 123)),
+        ((385, 170), (246, 153)), ((246, 153), (346, 123)),
+        ((346, 123), (326, 30)),  ((480, 150), (448, 30)),
+        # barrier 8
+        ((116, 108), (100, 30)), ((116, 108), (157, 99)),
+        ((157, 99), (187, 30)),
+        # barrier 9
+        ((126, 180), (140, 177)), ((140, 177), (149, 184)),
+        ((149, 184), (133, 201)), ((133, 201), (126, 180)),
+        # barrier 10
+        ((323, 498), (313, 473)), ((313, 473), (324, 461)),
+        ((324, 461), (337, 471)), ((337, 471), (348, 489)),
+        ((348, 489), (323, 498))
+        ]
+static_lines = []
+for line in stlines:
+    static_lines.append(pm.Segment(static_body, line[0], line[1], 0.0))
 for line in static_lines:
     line.elasticity = 0.95
-
-for line in barrier_static_lines:
-    line.elasticity = 0.95
-
 space.add(static_lines)
-space.add(barrier_static_lines)
-space.add(frame_arc) #Добавляем точки рамки, от которых будет отталкиваться шарик
+
+arc = [
+        ((30, 380), (50, 440)), ((50, 440), (70, 470)),
+        ((70, 470), (90, 490)), ((90, 490), (110, 505)),
+        ((110, 505), (130, 517)), ((130, 517), (150, 528)),
+        ((150, 528), (170, 537)), ((170, 537), (190, 544)),
+        ((190, 544), (210, 551)), ((210, 551), (230, 556)),
+        ((230, 556), (250, 560)), ((250, 560), (270, 564)),
+        ((270, 564), (290, 567)), ((290, 567), (310, 570)),
+        ((310, 570), (330, 570)), ((330, 570), (350, 570)),
+        ((350, 570), (370, 568)), ((370, 568), (390, 567)),
+        ((390, 567), (410, 564)), ((410, 564), (430, 560)),
+        ((430, 560), (450, 556)), ((450, 556), (470, 551)),
+        ((470, 551), (490, 544)), ((490, 544), (510, 537)),
+        ((510, 537), (530, 526)), ((530, 526), (550, 516)),
+        ((550, 516), (570, 505)), ((570, 505), (590, 488)),
+        ((590, 488), (610, 471)), ((610, 471), (630, 441)),
+        ((630, 441), (650, 380))
+        ]
+frame_arc = []
+for line in arc:
+    frame_arc.append(pm.Segment(static_body, line[0], line[1], 0.0))
+space.add(frame_arc)
+
+def show_logo():
+    screen.fill(THECOLORS["white"])
+    logosprite = pygame.image.load("logo3.png")
+    screen.blit(logosprite, (137, 58, 0, 0))
+    flag = True
+    while flag:
+        for event in pygame.event.get():
+            if event.type == KEYDOWN and event.key == K_q:
+                flag = False
+
+def to_pygame(p):
+    return int(p.x), int(-p.y+600)
 
 def add_ball(impulse):
-    mass = 10
-    radius = 25
-    inertia = pm.moment_for_circle(mass, 0, radius, (0,0))
-    body = pm.Body(mass, inertia)
+    inertia = pm.moment_for_circle(ball_mass, 0, ball_radius, (0,0))
+    body = pm.Body(ball_mass, inertia)
     body.position = (610, 150)
     body.apply_impulse(Vec2d.unit() * impulse, (-100, 0))
-    shape = pm.Circle(body, radius, (0,0))
-    shape.elasticity = 0.55
+    shape = pm.Circle(body, ball_radius, (0,0))
+    shape.elasticity = ball_elast
     space.add(body, shape)
     balls.append(shape)
 
-def add_point(x, y):
-    points.append((x,y))
-
-def draw_points(points):
-    for point in points:
-        rpointsprite.left, rpointsprite.top = point
-        rpointsprite.top *= -1
-        rpointsprite.top += 600
-        rpointsprite.left = rpointsprite.left - 35
-        rpointsprite.top = rpointsprite.top - 35
-        screen.blit(pointsprite, rpointsprite)
-
 def del_ball(ball):
     space.remove(ball, ball.body)
     balls.remove(ball)
 
-def change_velocity(balls):
+def change_velocity():
     for ball in balls:
         abs_velo = abs(ball.body.velocity[0]) + abs(ball.body.velocity[1])
 
-def draw_balls(balls):
+def draw_points():
+    for point in points:
+        x, y = point[0]
+        y = 600 - y - point_radius
+        x -= point_radius
+        rpointsprite.left, rpointsprite.top = x, y
+
+        label = Font.render("{0}".format(point[1]), True, (255,255,255)) 
+        screen.blit(pointsprite, rpointsprite)
+        screen.blit(label, (x + 20, y + 20))
+
+def draw_balls():
     for ball in balls:
         rballsprite.left, rballsprite.top = to_pygame(ball.body.position)
-        rballsprite.left -= 12
-        rballsprite.top -= 12
-        rballsprite.right -= 12
-        rballsprite.bottom -= 12
+        rballsprite.left -= ball_radius / 2
+        rballsprite.top -= ball_radius / 2
+        rballsprite.right -= ball_radius / 2
+        rballsprite.bottom -= ball_radius / 2
         screen.blit(ballsprite, rballsprite)
-
-def del_ball(ball):
-    space.remove(ball, ball.body)
-    balls.remove(ball)
 
 def draw_lines(lines_list):
     for line in lines_list:
@@ -175,57 +183,43 @@ def draw_lines(lines_list):
         pv2 = body.position + line.b.rotated(body.angle)
         pygame.draw.lines(screen, THECOLORS["black"], False, [to_pygame(pv1),to_pygame(pv2)])
 
+def draw_power(space_pressed):
+    if space_pressed > 90:
+        space_pressed = 90
+    for i in range(int(space_pressed)):
+        pygame.draw.rect(screen, THECOLORS["red"], (700, 570, 100, -i))
 
-def print_impulse(impulse):
-    impulse_data = Font.render("Last ball impulse: {0}".format(impulse), True, (0,0,0))
-    screen.blit(impulse_data, (800, 100))  
+def def_contact():
+    if not balls:
+        return 0
+    for point in points:
+        x, y = point[0]
+        bx, by = balls[0].body.position
+        length = math.sqrt((bx - x) * (bx - x) + (by - y) * (by - y))
+        if length <= 60.0:
+            return point
+    return 0
 
 def print_scores(scores):
     scores_data = Font.render("Scores: {0}".format(scores), True, (255,0,0))
     screen.blit(scores_data, (800, 200))  
 
-def draw_power(space_pressed):
-    if space_pressed > 90:
-        space_pressed = 90
-    for i in range(int(space_pressed)):
-        pygame.draw.rect(screen, (255,0,0), (700, 570, 100, -i))
-
-def def_contact(contact):
-    for point in points:
-        x, y = point
-        bx, by = balls[0].body.position
-        length = math.sqrt((bx - x) * (bx - x) + (by - y) * (by - y))
-       # print(point, balls[0].body.position, length)
-        if length <= 60.0 and contact == 0:
-            contact = 1
-            return 1
-        elif length <= 60.0:
-            contact += 1
-        else:
-            contact = 0
-        print(contact)
-    return contact
+def print_stat(scores, turns):
+    scores_data = Font.render("Total scores: {0}".format(scores), True, (0,0,0))
+    screen.blit(scores_data, (800, 140))  
+    scores_data = Font.render("Turns: {0}".format(turns), True, (0,0,0))
+    screen.blit(scores_data, (800, 160))  
     
 def play():
-    add_point(70, 65)
-    add_point(265, 73)
-    add_point(515, 80)
-    add_point(150, 260)
-    add_point(150, 400)
-    add_point(230, 430)
-    add_point(610, 70)
-    add_point(400, 340)
-    add_point(500, 300)
-    add_point(290, 310)
-    add_point(320, 220)
     begin_time = 0
     running = True
-    last_impulse = 0
-    contact = 0
+    impulse = 0
+    last_contact = 0
     scores = 0
+    total_score = 0
+    turns = 0
     space_pressed = 0
     while running:
-        screen.fill(THECOLORS["white"])
         key = pygame.key.get_pressed()
         if key[pygame.K_SPACE]:
             space_pressed += 1
@@ -235,41 +229,144 @@ def play():
         for event in pygame.event.get():
             if event.type == QUIT:
                 running = False
-            elif event.type == KEYDOWN and event.key == K_ESCAPE:
+            elif event.type == KEYDOWN and event.key == K_q:
                 running = False
             elif event.type == KEYDOWN and event.key == K_SPACE:                    
                 begin_time = pygame.time.get_ticks()                                
             elif event.type == KEYUP and event.key == K_SPACE:                      
-                impulse = pygame.time.get_ticks() - begin_time                      
-                impulse *= 10
+                impulse = 10 * (pygame.time.get_ticks() - begin_time) 
                 if impulse > 20000:
                     impulse = 20000
-                last_impulse = impulse
-                if len(balls):
+                impulse + random.random() * 1000
+                if balls:
                     del_ball(balls[0])
+                total_score += scores
+                turns += 1
+                scores = 0
                 add_ball(impulse)
 
-        print_impulse(last_impulse)
-        if len(balls):
-            contact = def_contact(contact)
-        if contact == 1:
-            scores += 100
-        print_scores(scores)
-        change_velocity(balls)
-        draw_power(space_pressed)
-        draw_points(points)
-        draw_balls(balls)
-        draw_lines(static_lines)
-        draw_lines(barrier_static_lines)
-        
-        pygame.draw.arc(screen,THECOLORS["black"],[30,30, 620,400], 0, math.pi/1.95, 2)#Левая дуга
-        pygame.draw.arc(screen,THECOLORS["black"],[30,30, 620,400], math.pi/2, math.pi, 2)#Правая дуга   
+        # count scores
+        contact = def_contact()
+        if last_contact == 0 and contact:
+            scores += contact[1]
 
+        # Drawing
+        screen.fill(THECOLORS["white"])
+        print_scores(scores)
+        print_stat(total_score, turns)
+        draw_power(space_pressed)
+        draw_points()
+        draw_balls()
+        draw_lines(static_lines)
+        pygame.draw.arc(screen,THECOLORS["black"],[30,30, 620,400], 0, math.pi/1.95, 2)
+        pygame.draw.arc(screen,THECOLORS["black"],[30,30, 620,400], math.pi/2, math.pi, 2)
+        pygame.display.flip()
+
+        change_velocity()
         dt = 1.0/60.0
         for x in range(1):
             space.step(dt)
     
-        pygame.display.flip()
         clock.tick(50)
+        last_contact = contact
+    if balls:
+        del_ball(balls[0])
 
-play()
+# Markov chain
+iterate = 100000
+trmatrix = [
+    [0,   0.2, 0.2, 0,   0.2, 0.2, 0,   0.2, 0,   0,   0], 
+    [0,   0,   0,   0,   1.0, 0,   0,   0,   0,   0,   0], 
+    [0,   0.1, 0.3, 0,   0.3, 0.3, 0,   0,   0,   0,   0], 
+    [0,   0,   0,   0.1, 0,   0,   0.3, 0,   0.3, 0.3, 0], 
+    [0,   0,   0,   0.2, 0,   0.2, 0.2, 0,   0.2, 0.2, 0], 
+    [0,   0,   0,   0,   0.1, 0,   0.3, 0.3, 0,   0,   0.3], 
+    [0,   0,   0,   0.1, 0,   0,   0,   0,   0.4, 0.4, 0.1], 
+    [0,   0,   0,   0,   0,   0,   0.6, 0,   0,   0,   0.4], 
+    [0,   0,   0,   0,   0,   0,   0,   0,   1.0, 0,   0], 
+    [0,   0,   0,   0,   0,   0,   0,   0,   0,   1.0, 0], 
+    [0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   1.0]
+]
+
+s1 = [
+    [0,   0.2, 0.4, 0.4, 0.6, 0.8, 0,   1.0, 0,   0,   0], 
+    [0,   0,   0,   0,   1.0, 1.0, 1.0, 1.0, 0,   0,   0], 
+    [0,   0.1, 0.4, 0.4, 0.7, 1.0, 0,   0,   0,   0,   0], 
+    [0,   0,   0,   0.1, 0.1, 0.1, 0.4, 0.4, 0.7, 1.0, 1.0], 
+    [0,   0,   0,   0.2, 0.2, 0.4, 0.6, 0.6, 0.8, 1.0, 0], 
+    [0,   0,   0,   0,   0.1, 0.1, 0.4, 0.7, 0.7, 0.7, 1.0], 
+    [0,   0,   0,   0.1, 0.1, 0.1, 0.1, 0.1, 0.5, 0.9, 1.0], 
+    [0,   0,   0,   0,   0,   0,   0.6, 0.6, 0.6, 0.6, 1.0], 
+    [0,   0,   0,   0,   0,   0,   0,   0,   1.0, 1.0, 1.0], 
+    [0,   0,   0,   0,   0,   0,   0,   0,   0,   1.0, 1.0], 
+    [0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   1.0] 
+]
+
+def return_state(slist, rndm):
+    for i in range(11):
+        if slist[i] >= rndm:
+            return i
+
+def draw_in_state(state, score):
+    screen.fill(THECOLORS["white"])
+    draw_points()
+    draw_lines(static_lines)
+    pygame.draw.arc(screen,THECOLORS["black"],[30,30, 620,400], 0, math.pi/1.95, 2)
+    pygame.draw.arc(screen,THECOLORS["black"],[30,30, 620,400], math.pi/2, math.pi, 2)
+    x, y = points[state][0]
+    y = 600 - y
+    rballsprite.left, rballsprite.top = x, y
+    rballsprite.left -= ball_radius
+    rballsprite.top -= ball_radius
+    screen.blit(ballsprite, rballsprite)
+    print_scores(score)
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                running = False
+            elif event.type == KEYDOWN:
+                running = False
+    
+def step(test, total_score, turns):
+    state = 0
+    score = 0
+    run = 1
+    last_state = state
+    llast_state = state
+    while (run):
+        state = return_state(s1[state], random.random())
+        score += points[state][1]
+        if not test:
+            draw_in_state(state, score)
+            print_stat(total_score, turns)
+            pygame.display.flip()
+        if llast_state == last_state and last_state == state:
+            run = 0
+        llast_state = last_state
+        last_state = state
+    return score
+
+def mark(iterate):
+    total_score = 0
+    turns = 0
+    draw_in_state(0, 0)
+    print_stat(0, 0)
+    pygame.display.flip()
+    for i in range(iterate):
+        total_score += step(False, total_score, turns)
+        turns += 1
+    print("Total score: {0}; turns: {1}".format(total_score, turns))
+
+def markov():
+    totalscore = 0.0
+    sq = 0.0
+    for i in range(iterate):
+        tmp = step(True, totalscore, sq)
+        totalscore += tmp
+        sq += tmp * tmp
+    average = totalscore / iterate
+    variance = sq / iterate - average * average
+    print("Total score: {0}".format(totalscore))
+    print("Average: {0}".format(totalscore / iterate))
+    print("Variance: {0}".format(variance))
